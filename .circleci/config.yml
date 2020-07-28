@@ -22,7 +22,8 @@ jobs:
             cd .. && git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
             cd citra-nightly
             git checkout -b "${TAG}" && mkdir build && cd build
-            cmake .. -DENABLE_FFMPEG_AUDIO_DECODER=ON && make -j4
+            cmake .. -DENABLE_FFMPEG_AUDIO_DECODER=ON
+            make
             cd ../.. && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
             cd arch-citra-nightly
             /bin/cp ../citra-nightly/build/bin/Release/citra .
