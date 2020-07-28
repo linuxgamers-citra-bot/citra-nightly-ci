@@ -1,0 +1,3 @@
+Host github.com-linux-gamers
+  IdentityFile ~/.ssh/citra-bot
+  User git
