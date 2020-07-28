@@ -14,7 +14,7 @@ jobs:
             mkdir -p shared
             git config --global user.name "${GIT_USER}"
             git config --global user.email "${GIT_EMAIL}"
-            git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/citra-nightly-ci.git
+            git clone https://${GITHUB_TOKEN}@github.com/linuxgamers-citra-bot/citra-nightly-ci.git
             cd citra-nightly-ci/.circleci
             export TAG=$(python -u check_new_release.py)
             if [ -z "$TAG" ]; then echo "No new release to publish" && exit 1; fi
