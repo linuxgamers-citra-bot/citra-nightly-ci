@@ -12,7 +12,7 @@ payload = {
 
 }
 print('Submitting release: {}'.format(payload))
-res = requests.post('https://api.github.com/repos/linux-gamers/arch-yuzu-mainline/releases',
+res = requests.post('https://api.github.com/repos/linux-gamers/arch-citra-nightly/releases',
                     json=payload,
                     headers={'Authorization': 'token {}'.format(os.environ['GITHUB_TOKEN'])})
 
