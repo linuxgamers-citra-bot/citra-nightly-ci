@@ -18,6 +18,7 @@ jobs:
             cd citra-nightly-ci/.circleci
             export TAG=$(python -u check_new_release.py)
             if [ -z "$TAG" ]; then echo "No new release to publish" && exit 1; fi
+            echo "New release: ${TAG}"
             cd .. && git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
             cd citra-nightly
             git checkout -b "${TAG}" && mkdir build && cd build
