@@ -131,7 +131,7 @@ jobs:
             cd citra-nightly
             git checkout -b "${TAG}" && mkdir build && cd build
             cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON
-            make -j4
+            make -j4 -k
             cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
             cd arch-citra-nightly
             /bin/cp ../citra-nightly/build/bin/Release/citra dist/
