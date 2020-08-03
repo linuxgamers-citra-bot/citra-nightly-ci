@@ -45,10 +45,11 @@ jobs:
               make -j4
               cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
               cd arch-citra-nightly
-              /bin/cp ../citra-nightly/build/bin/yuzu dist/
-              /bin/cp ../citra-nightly/build/bin/yuzu-cmd dist/
-              /bin/cp ../citra-nightly/dist/yuzu.desktop dist/
-              /bin/cp ../citra-nightly/dist/yuzu.svg dist/
+              /bin/cp ../citra-nightly/build/bin/Release/citra dist/
+              /bin/cp ../citra-nightly/build/bin/Release/citra-qt dist/
+              /bin/cp ../citra-nightly/build/bin/Release/citra-room dist/
+              /bin/cp ../citra-nightly/dist/citra.desktop dist/
+              /bin/cp ../citra-nightly/dist/citra.svg dist/
               /bin/cp ../citra-nightly/license.txt dist/
               git add .
               git commit -m "[RELEASE ${TAG}]"
@@ -114,6 +115,34 @@ jobs:
             echo "Pushing release ${TAG} to AUR"
             git push
 
+  test:
+    docker:
+      - image: linuxgamers/arch-citra-build
+        user: linuxgamers
+    steps:
+      - run:
+          name: Commiting binaries to GitHub
+          command: |
+            git config --global user.name "${GIT_USER}"
+            git config --global user.email "${GIT_EMAIL}"
+            export TAG=1599
+            echo "Commiting binaries of: ${TAG}"
+            git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
+            cd citra-nightly
+            git checkout -b "${TAG}" && mkdir build && cd build
+            cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON
+            make -j4
+            cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
+            cd arch-citra-nightly
+            /bin/cp ../citra-nightly/build/bin/Release/citra dist/
+            /bin/cp ../citra-nightly/build/bin/Release/citra-qt dist/
+            /bin/cp ../citra-nightly/build/bin/Release/citra-room dist/
+            /bin/cp ../citra-nightly/dist/citra.desktop dist/
+            /bin/cp ../citra-nightly/dist/citra.svg dist/
+            /bin/cp ../citra-nightly/license.txt dist/
+            git add .
+            git status
+
 workflows:
   build-03:
     triggers:
@@ -150,3 +179,7 @@ workflows:
             branches:
               only:
                 - ci
+
+  build-now:
+    jobs:
+      - test
