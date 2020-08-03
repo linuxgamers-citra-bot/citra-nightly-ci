@@ -115,71 +115,20 @@ jobs:
             echo "Pushing release ${TAG} to AUR"
             git push
 
-  test:
-    docker:
-      - image: linuxgamers/arch-citra-build
-        user: linuxgamers
-    steps:
-      - run:
-          name: Commiting binaries to GitHub
-          command: |
-            git config --global user.name "${GIT_USER}"
-            git config --global user.email "${GIT_EMAIL}"
-            export TAG=1599
-            echo "Commiting binaries of: ${TAG}"
-            git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
-            cd citra-nightly
-            git checkout -b "${TAG}" && mkdir build && cd build
-            cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON
-            make -j4 -k
-            cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
-            cd arch-citra-nightly
-            /bin/cp ../citra-nightly/build/bin/Release/citra dist/
-            /bin/cp ../citra-nightly/build/bin/Release/citra-qt dist/
-            /bin/cp ../citra-nightly/build/bin/Release/citra-room dist/
-            /bin/cp ../citra-nightly/dist/citra.desktop dist/
-            /bin/cp ../citra-nightly/dist/citra.svg dist/
-            /bin/cp ../citra-nightly/license.txt dist/
-            git add .
-            git status
-
 workflows:
   build-03:
     triggers:
       - schedule:
           cron: "0 3 * * *"
-          filters:
-            branches:
-              only:
-                - ci
+          
     jobs:
-      - check-release:
-          filters:
-            branches:
-              only:
-                - ci
+      - check-release
       - commit-github:
           requires:
             - check-release
-          filters:
-            branches:
-              only:
-                - ci
       - release-github:
           requires:
             - commit-github
-          filters:
-            branches:
-              only:
-                - ci
       - release-aur:
           requires:
             - release-github
-          filters:
-            branches:
-              only:
-                - ci
-
-  build-now:
-    jobs:
-      - test
