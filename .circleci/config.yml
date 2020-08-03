@@ -1,75 +1,152 @@
 version: 2.1
 
-defaults: &defaults
-  working_directory: /tmp/work
-
 jobs:
-  release-github:
+  check-release:
+    docker:
+      - image: linuxgamers/scripting
+        user: linuxgamers
+    steps:
+        - run:
+            name: Checking available release
+            command: |
+              git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
+              cd arch-citra-nightly
+              TAG=$(python3 -u .circleci/check_new_release.py)
+              if [ -z "$TAG" ]; then echo "No new release to publish" && exit 1; else echo "New release available: ${TAG}"; fi
+              mkdir -p /home/linuxgamers/project/shared
+              echo "${TAG}" > /home/linuxgamers/project/shared/tag.txt
+              /bin/cp .circleci/check_new_release.py /home/linuxgamers/project/shared/
+              /bin/cp .circleci/release_github.py /home/linuxgamers/project/shared/
+        - persist_to_workspace:
+            root: shared
+            paths:
+              - tag.txt
+              - check_new_release.py
+              - release_github.py
+
+  commit-github:
     docker:
       - image: linuxgamers/arch-citra-build
+        user: linuxgamers
     steps:
+        - attach_workspace:
+            at: /home/linuxgamers/project/shared
+        - run:
+            name: Commiting binaries to GitHub
+            command: |
+              git config --global user.name "${GIT_USER}"
+              git config --global user.email "${GIT_EMAIL}"
+              export TAG=$(cat shared/tag.txt)
+              echo "Commiting binaries of: ${TAG}"
+              git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
+              cd citra-nightly
+              git checkout -b "${TAG}" && mkdir build && cd build
+              cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON 
+              make -j4
+              cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
+              cd arch-citra-nightly
+              /bin/cp ../citra-nightly/build/bin/yuzu dist/
+              /bin/cp ../citra-nightly/build/bin/yuzu-cmd dist/
+              /bin/cp ../citra-nightly/dist/yuzu.desktop dist/
+              /bin/cp ../citra-nightly/dist/yuzu.svg dist/
+              /bin/cp ../citra-nightly/license.txt dist/
+              git add .
+              git commit -m "[RELEASE ${TAG}]"
+              git push -q https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git master
+        - persist_to_workspace:
+            root: shared
+            paths:
+              - tag.txt
+              - check_new_release.py
+              - release_github.py
+
+  release-github:
+    docker:
+      - image: linuxgamers/scripting
+        user: linuxgamers
+    steps:
+      - attach_workspace:
+          at: /home/linuxgamers/project/shared
+
       - run:
           name: Publishing release to GitHub
           command: |
-            mkdir -p shared
-            git config --global user.name "${GIT_USER}"
-            git config --global user.email "${GIT_EMAIL}"
-            git clone https://${GITHUB_TOKEN}@github.com/linuxgamers-citra-bot/citra-nightly-ci.git
-            cd citra-nightly-ci/.circleci
-            export TAG=$(python -u check_new_release.py)
-            if [ -z "$TAG" ]; then echo "No new release to publish" && exit 1; fi
-            echo "New release: ${TAG}"
-            cd .. && git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
-            cd citra-nightly
-            git checkout -b "${TAG}" && mkdir build && cd build
-            cmake .. -DENABLE_FFMPEG_AUDIO_DECODER=ON
-            make
-            cd ../.. && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
-            cd arch-citra-nightly
-            /bin/cp ../citra-nightly/build/bin/Release/citra .
-            /bin/cp ../citra-nightly/build/bin/Release/citra-qt .
-            /bin/cp ../citra-nightly/build/bin/Release/citra-room .
-            /bin/cp ../citra-nightly/dist/citra.desktop .
-            /bin/cp ../citra-nightly/dist/citra.svg .
-            git add .
-            git commit -m "[RELEASE ${TAG}]"
-            git push -q https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git master
-            cd ../citra-nightly-ci/.circleci
-            python -u release_github.py
-            cat "${TAG}" > /tmp/work/shared/tag.txt
+            export TAG=$(cat shared/tag.txt)
+            python3 -u shared/release_github.py
+
       - persist_to_workspace:
           root: shared
           paths:
             - tag.txt
+            - check_new_release.py
+            - release_github.py
 
   release-aur:
     docker:
-      - image: linuxgamers/arch-citra-build
+      - image: linuxgamers/scripting
+        user: linuxgamers
     steps:
       - attach_workspace:
-          at: /tmp/work/shared
+          at: /home/linuxgamers/project/shared
+
+      - add_ssh_keys:
+          fingerprints:
+            - "11:77:57:1a:21:81:c1:bd:9c:29:dc:8e:48:b8:bc:d8"
       - run:
           name: Publishing release to AUR
           command: |
             git config --global user.name "${GIT_USER}"
             git config --global user.email "${GIT_EMAIL}"
+            mkdir -p ~/.ssh
+            touch ~/.ssh/known_hosts
+            eval "$(ssh-agent -s)"
+            ssh-keyscan -H 'aur.archlinux.org' >> ~/.ssh/known_hosts
             export TAG=$(cat shared/tag.txt)
-            echo "${TAG}"
-            git clone ssh://aur@aur.archlinux.org/citra-nightly.git  && cd citra-nightly
+            git clone ssh://aur@aur.archlinux.org/citra-nightly.git && cd citra-nightly
             wget "https://github.com/linux-gamers/arch-citra-nightly/archive/${TAG}.tar.gz"
-            VERSION=$(echo ${TAG} | cut -d- -f2)
-            sed -i -E "s/pkgver=.+/pkgver=${VERSION}/" PKGBUILD
             SHA=$(sha512sum ${TAG}.tar.gz | grep -Eo "(\w+)\s" | cut -d" " -f1)
             sed -i -E "s/sha512sums=.+/sha512sums=\(\'${SHA}\'\)/" PKGBUILD
+            VERSION=$(echo ${TAG} | cut -d- -f2)
+            sed -i -E "s/_pkgver=.+/_pkgver=${VERSION}/" PKGBUILD
+            sed -i -E "s/pkgrel=.+/pkgrel=1/" PKGBUILD
             ./gensrc.sh
-            makepkg -Acsmf
             git commit -am "${TAG}"
+            echo "Pushing release ${TAG} to AUR"
             git push
 
 workflows:
-  publish-release:
+  build-03:
+    triggers:
+      - schedule:
+          cron: "0 3 * * *"
+          filters:
+            branches:
+              only:
+                - ci
     jobs:
-      - release-github
+      - check-release:
+          filters:
+            branches:
+              only:
+                - ci
+      - commit-github:
+          requires:
+            - check-release
+          filters:
+            branches:
+              only:
+                - ci
+      - release-github:
+          requires:
+            - commit-github
+          filters:
+            branches:
+              only:
+                - ci
       - release-aur:
           requires:
             - release-github
+          filters:
+            branches:
+              only:
+                - ci
