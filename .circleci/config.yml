@@ -118,29 +118,13 @@ jobs:
 workflows:
   build-03:
     jobs:
-      - check-release:
-          filters:
-            branches:
-              only:
-                - ci
+      - check-release
       - commit-github:
           requires:
             - check-release
-          filters:
-            branches:
-              only:
-                - ci
       - release-github:
           requires:
             - commit-github
-          filters:
-            branches:
-              only:
-                - ci
       - release-aur:
           requires:
             - release-github
-          filters:
-            branches:
-              only:
-                - ci
