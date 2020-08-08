@@ -117,18 +117,30 @@ jobs:
 
 workflows:
   build-03:
-    triggers:
-      - schedule:
-          cron: "0 3 * * *"
-          
     jobs:
-      - check-release
+      - check-release:
+          filters:
+            branches:
+              only:
+                - ci
       - commit-github:
           requires:
             - check-release
+          filters:
+            branches:
+              only:
+                - ci
       - release-github:
           requires:
             - commit-github
+          filters:
+            branches:
+              only:
+                - ci
       - release-aur:
           requires:
             - release-github
+          filters:
+            branches:
+              only:
+                - ci
