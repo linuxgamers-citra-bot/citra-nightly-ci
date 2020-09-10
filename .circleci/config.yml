@@ -41,10 +41,10 @@ jobs:
               git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
               cd citra-nightly
               git checkout -b "${TAG}" && mkdir build && cd build
-              cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON 
+              cmake .. -DCMAKE_BUILD_TYPE=Release
               make -j4
-              cd ../../ && git clone https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
-              cd arch-citra-nightly
+              cd ../../ && git clone -b master --depth=1 https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
+              cd arch-citra-nightly && git checkout master 
               /bin/cp ../citra-nightly/build/bin/Release/citra dist/
               /bin/cp ../citra-nightly/build/bin/Release/citra-qt dist/
               /bin/cp ../citra-nightly/build/bin/Release/citra-room dist/
