@@ -39,7 +39,7 @@ jobs:
               git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
               cd citra-nightly
               git checkout -b "${TAG}" && mkdir build && cd build
-              cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON -DUSE_SYSTEM_BOOST=ON -DENABLE_GENERIC=0
+              cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON -DUSE_SYSTEM_BOOST=ON -DENABLE_GENERIC=1 -DARCHITECTURE=x86_64
               make -j4
 
   release-github:
