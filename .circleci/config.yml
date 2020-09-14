@@ -29,18 +29,37 @@ jobs:
       - image: linuxgamers/arch-citra-build
         user: linuxgamers
     steps:
+        - attach_workspace:
+            at: /home/linuxgamers/project/shared
         - run:
             name: Commiting binaries to GitHub
             command: |
               git config --global user.name "${GIT_USER}"
               git config --global user.email "${GIT_EMAIL}"
-              export TAG=1621
+              export TAG=$(cat shared/tag.txt)
               echo "Commiting binaries of: ${TAG}"
               git clone --recursive -b "nightly-${TAG}" --depth 1 https://github.com/citra-emu/citra-nightly.git
               cd citra-nightly
               git checkout -b "${TAG}" && mkdir build && cd build
               cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_FFMPEG_AUDIO_DECODER=ON -DUSE_SYSTEM_BOOST=ON -DENABLE_GENERIC=1 -DARCHITECTURE=x86_64
               make -j4
+              cd ../../ && git clone -b master --depth=1 https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git
+              cd arch-citra-nightly && git checkout master 
+              /bin/cp ../citra-nightly/build/bin/Release/citra dist/
+              /bin/cp ../citra-nightly/build/bin/Release/citra-qt dist/
+              /bin/cp ../citra-nightly/build/bin/Release/citra-room dist/
+              /bin/cp ../citra-nightly/dist/citra.desktop dist/
+              /bin/cp ../citra-nightly/dist/citra.svg dist/
+              /bin/cp ../citra-nightly/license.txt dist/
+              git add .
+              git commit -m "[RELEASE ${TAG}]"
+              git push -q https://${GITHUB_TOKEN}@github.com/linux-gamers/arch-citra-nightly.git master
+        - persist_to_workspace:
+            root: shared
+            paths:
+              - tag.txt
+              - check_new_release.py
+              - release_github.py
 
   release-github:
     docker:
@@ -99,4 +118,13 @@ jobs:
 workflows:
   build-03:
     jobs:
-      - commit-github
+      - check-release
+      - commit-github:
+          requires:
+            - check-release
+      - release-github:
+          requires:
+            - commit-github
+      - release-aur:
+          requires:
+            - release-github
