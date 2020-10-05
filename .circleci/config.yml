@@ -109,7 +109,7 @@ jobs:
             SHA=$(sha512sum ${TAG}.tar.gz | grep -Eo "(\w+)\s" | cut -d" " -f1)
             sed -i -E "s/sha512sums=.+/sha512sums=\(\'${SHA}\'\)/" PKGBUILD
             VERSION=$(echo ${TAG} | cut -d- -f2)
-            sed -i -E "s/_pkgver=.+/_pkgver=${VERSION}/" PKGBUILD
+            sed -i -E "s/pkgver=.+/pkgver=${VERSION}/" PKGBUILD
             sed -i -E "s/pkgrel=.+/pkgrel=1/" PKGBUILD
             ./gensrc.sh
             git commit -am "${TAG}"
