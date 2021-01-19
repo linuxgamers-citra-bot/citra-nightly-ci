@@ -1,6 +1,15 @@
 version: 2.1
 
 jobs:
+  trigger-build-image:
+    docker:
+      - image: linuxgamers/scripting
+        user: linuxgamers
+    steps:
+      - run:
+          name: Triggering base Docker image build
+          command: curl -X POST ${DOCKERHUB_TRIGGER_URL}
+
   check-release:
     docker:
       - image: linuxgamers/scripting
@@ -157,3 +166,17 @@ workflows:
       - release-aur:
           requires:
             - release-github
+  build-image:
+    triggers:
+      - schedule:
+          cron: "0 6 1 * *"
+          filters:
+            branches:
+              only:
+                - ci
+    jobs:
+      - trigger-build-image:
+          filters:
+            branches:
+              only:
+                - ci
